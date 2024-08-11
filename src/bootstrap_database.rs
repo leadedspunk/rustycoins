@@ -1,6 +1,5 @@
 use crate::{schema, structs::Account};
-use diesel::{self, connection, Connection, RunQueryDsl, SqliteConnection};
-use serde;
+use diesel::{self, Connection, RunQueryDsl, SqliteConnection};
 use dotenv::dotenv;
 use std::env;
 
@@ -38,15 +37,4 @@ pub fn start() {
         .values(liabilites)
         .execute(&mut connection)
         .expect("Error adding accounts");
-
-
-    let mut connection2 = establish_connection();
-
-    let results = schema::accounts::table
-        .load::<Account>(&mut connection2)
-        .expect("Error loading users");
-
-    for acc in results{
-        println!("ID: {}, Name: {}, Email: {}", acc.id.unwrap(), acc.name, acc.parent);
-    }
 }

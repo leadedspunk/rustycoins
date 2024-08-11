@@ -4,7 +4,7 @@ use diesel::prelude::*;
 use crate::schema::accounts;
 
 #[derive(Queryable, Selectable, Insertable)]
-#[diesel(table_name = accounts)]
+#[table_name = "accounts"]
 pub struct Account{
     pub id: Option<i32>,
     pub name: String,
