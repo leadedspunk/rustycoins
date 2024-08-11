@@ -23,14 +23,17 @@ jobs:
     - name: Build
       run: cargo build --release --target x86_64-unknown-linux-gnu #; cargo build --release --target x86_64-pc-windows-msvc
 
-    # - name: Create Release
-    #   id: create_release
-    #   uses: softprops/action-gh-release@v1
-    #   with:
-    #     files: target/release/my_binary
-
     - name: check files
-      run: cd ./target/release; ls -la
+      run: cd ./target/release; tree
+
+    - name: Try run
+      run: cd ./target/release/rustycoins.elf
+
+    - name: Create Release
+      id: create_release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: target/release/rustycoins
 
     - name: Run tests
       run: cargo test --verbose
