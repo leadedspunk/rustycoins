@@ -15,9 +15,9 @@ jobs:
     steps:
     - name: Chekout
       uses: actions/checkout@v4
-      
+
     - name: Set RUSTFLAGS
-      run: echo "RUSTFLAGS='-L ./libs'" >> $GITHUB_ENV
+      run: echo "RUSTFLAGS='-L/libs'" >> $GITHUB_ENV
 
     - name: Install deps
       run: cargo install diesel_cli
