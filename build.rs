@@ -31,11 +31,6 @@ fn main() {
             .expect("Failed to run diesel migration");
     }
 
-    let en = Path::new("./.env");
-
-    fs::copy(en, Path::new(&out_dir).join(".env"))
-        .expect("Failed to copy env file");
-
     // Inform Cargo to rerun the build script if `db.sqlite` doesn't exist
     println!("cargo:rerun-if-changed={}", db_path.display());
 }
