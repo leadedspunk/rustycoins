@@ -3,11 +3,11 @@ use std::process::Command;
 use std::{env, fs};
 
 fn main() {
-    println!("cargo:rustc-link-search=C:\\SQLite\\lib");
+    println!("cargo:rustc-link-search=.\\libs");
     println!("cargo:rustc-link-lib=static=sqlite3");
 
     let out_dir = env::var("OUT_DIR").unwrap();
-    let out_path = Path::new(&out_dir);
+    // let out_path = Path::new(&out_dir);
     println!("OUT_DIR: {}", out_dir);
 
     let db_path = Path::new(&out_dir).join("./db.sqlite");
@@ -32,9 +32,6 @@ fn main() {
     }
 
     let en = Path::new("./.env");
-
-    let dest_path = Path::new("./").join("output.txt");
-    fs::write(dest_path, &out_dir).unwrap();
 
     fs::copy(en, Path::new(&out_dir).join(".env"))
         .expect("Failed to copy env file");
