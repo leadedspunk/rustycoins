@@ -7,8 +7,9 @@ buiild = "build.rs"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+chrono = "0.4.38"
 clap = { version = "4.5.13", features = ["derive"] }
-diesel = { version = "2.2.2", features = ["sqlite"] }
+diesel = { version = "2.2.2", features = ["chrono", "sqlite", "time"] }
 dotenv = { version = "0.15.0", features = ["clap"] }
 rand = "0.8.5"
 serde = { version = "1.0.204", features = ["derive"] }

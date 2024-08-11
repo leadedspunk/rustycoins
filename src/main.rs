@@ -1,20 +1,22 @@
+use chrono;
+use chrono::NaiveDate;
 use clap::{command, Parser, Subcommand};
-use diesel::query_dsl::methods::FilterDsl;
-use diesel::{Connection, ExpressionMethods, RunQueryDsl, SqliteConnection};
+use diesel::{Connection, ExpressionMethods, QueryDsl, RunQueryDsl, SqliteConnection};
 use dotenv::dotenv;
 use rustycoins::bootstrap_database;
 use rustycoins::schema;
 use rustycoins::schema::accounts;
-use rustycoins::structs::{Account, MTransaction};
-use std::any::Any;
+use rustycoins::schema::journal;
+use rustycoins::schema::ledger;
+use rustycoins::schema::transactions;
+use rustycoins::structs::{Account, JournalEntry, LedgerEntry, MTransaction};
 use std::env;
 use std::path::Path;
-use time::OffsetDateTime;
 
 macro_rules! load_entities {
-    ($table:expr, $entity:ty) => {
+    ($con:expr, $table:expr, $entity:ty) => {
         $table
-            .load::<$entity>(&mut establish_connection())
+            .load::<$entity>($con)
             .expect("Error loading entities")
     };
 }
@@ -29,11 +31,33 @@ fn establish_connection() -> SqliteConnection {
         .expect(&format!("Error connecting to {}", database_url))
 }
 
-// let accounts: Vec<Account> = load_entities!(schema::accounts::table, Account);
-//     println!("{:<3}|{:<20}|{:<3}", "ID", "Name", "Parent");
-//     for acc in accounts{
-//         println!("{:<3}|{:<20}|{:<3}", acc.id.unwrap(), acc.name, acc.parent);
-//     }
+pub fn get_account_name(con: &mut SqliteConnection, acct_id: i32) -> String {
+    use crate::schema::accounts::dsl::{accounts, id, name};
+
+    let accoount_name = accounts
+        .filter(id.eq(acct_id))
+        .select(name)
+        .first(con)
+        .unwrap();
+
+    accoount_name
+}
+
+pub fn get_ledger_entries(con: &mut SqliteConnection, acct_id: i32) -> Vec<LedgerEntry> {
+    use crate::schema::ledger::dsl::{account, ledger};
+    if acct_id != 0 {
+        let ledgers = ledger
+        .filter(account.eq(acct_id))
+        .load::<LedgerEntry>(con)
+        .unwrap();
+
+        ledgers
+    }else {
+        let ledgers = load_entities!(con, schema::ledger::table, LedgerEntry);
+        ledgers
+    }
+    
+}
 
 /// RustyCoins: A Rust-based personal financing tool
 #[derive(Parser, Debug)]
@@ -58,6 +82,14 @@ enum Commands {
         #[command(subcommand)]
         action: TransactionAction,
     },
+    Ledger {
+        #[command(subcommand)]
+        action: LedgerAction,
+    },
+    Journal {
+        #[command(subcommand)]
+        action: JournalAction,
+    },
 }
 
 #[derive(Subcommand, Debug)]
@@ -70,34 +102,45 @@ enum AccountAction {
         parent: i32,
     },
     /// Delete an account
-    Drop {
-        id: i32,
-    },
+    Drop { id: i32 },
     /// List all accounts
     List,
 }
 
 #[derive(Subcommand, Debug)]
 enum TransactionAction {
-    /// Create a new transaction
+    // Create a new transaction
     New {
-        /// Transaction amount
+        // Transaction amount
         amount: f32,
-        /// Account to be credited
+        //Transaction Date and time
+        datetime: String,
+        // Account to be credited
         credit: i32,
-        /// Account to be debited
+        // Account to be debited
         debit: i32,
+        // Description
+        desc: String,
     },
+    // List all transactions
+    List,
+}
+
+#[derive(Subcommand, Debug)]
+enum LedgerAction {
+    // List all transactions
+    List { account_id: i32 },
+}
+
+#[derive(Subcommand, Debug)]
+enum JournalAction {
+    // List all transactions
+    List,
 }
 
 fn main() {
     env::set_var("DATABASE_URL", "./db.sqlite");
-
     let mut con = establish_connection();
-    let accounts = schema::accounts::table
-        .load::<Account>(&mut con)
-        .expect("Error loading users");
-
     let args = Args::parse();
 
     match args.command {
@@ -108,14 +151,14 @@ fn main() {
         }
 
         Commands::Account { action } => match action {
-            AccountAction::New { name, parent} => {
+            AccountAction::New { name, parent } => {
                 println!("Creating a new account with name: {}", name);
                 // Create a new account with the given name
                 let new_account = Account::new(name.as_str(), parent);
                 diesel::insert_into(accounts::table)
-                .values(new_account)
-                .execute(&mut establish_connection())
-                .expect("Error creating account");
+                    .values(new_account)
+                    .execute(&mut con)
+                    .expect("Error creating account");
             }
             AccountAction::Drop { id } => {
                 println!("Dropping Accout {}", id);
@@ -125,7 +168,8 @@ fn main() {
             AccountAction::List => {
                 println!("Listing all accounts...");
                 // List all accounts
-                let accounts: Vec<Account> = load_entities!(schema::accounts::table, Account);
+                let accounts: Vec<Account> =
+                    load_entities!(&mut con, schema::accounts::table, Account);
                 println!("{:<3}|{:<20}", "ID", "Name");
                 for acc in &accounts {
                     if acc.parent == 0 {
@@ -140,14 +184,11 @@ fn main() {
                                     if subacc2.parent == a2_id {
                                         let name2 = format!("  ↳ {}", subacc2.name);
                                         println!("{:<3}|{:<30}", subacc2.id.unwrap(), name2);
-                                        
                                     }
                                 }
-                                
                             }
                         }
                     }
-                    
                 }
             }
         },
@@ -157,13 +198,97 @@ fn main() {
                 amount,
                 credit,
                 debit,
+                datetime,
+                desc,
             } => {
+                let ddate: NaiveDate =
+                    NaiveDate::parse_from_str(&datetime, "%d-%m-%Y").expect("Invalid Date Format");
                 println!("Creating a new transaction:");
                 println!("  Amount: {}", amount);
                 println!("  Credit: {}", credit);
                 println!("  Debit: {}", debit);
+
                 // Create a new transaction with the given details
-                let _new_transaction = MTransaction::new(OffsetDateTime::now_utc(), amount, credit, debit);
+                let mut new_transaction: MTransaction =
+                    MTransaction::new(ddate, amount, credit, debit);
+                new_transaction.description(&desc);
+
+                diesel::insert_into(transactions::table)
+                    .values(new_transaction)
+                    .execute(&mut con)
+                    .expect("Error creating account");
+
+                let mut new_transaction: MTransaction =
+                    schema::transactions::table.first(&mut con).unwrap();
+
+                let (ledgers, journals) = new_transaction.create_entrys();
+
+                diesel::insert_into(ledger::table)
+                    .values(ledgers)
+                    .execute(&mut con)
+                    .expect("Error creating account");
+
+                diesel::insert_into(journal::table)
+                    .values(journals)
+                    .execute(&mut con)
+                    .expect("Error creating account");
+            }
+            TransactionAction::List => {
+                let transactionlist =
+                    load_entities!(&mut con, schema::transactions::table, MTransaction);
+                println!(
+                    "{:<5}|{:<10}|{:<10}|{:<8}|{:<8}|{:<30}",
+                    "ID", "Date", "Amount", "Credit", "Debit", "Description"
+                );
+                for item in transactionlist {
+                    println!(
+                        "{:<5}|{:<10}|{:<10}|{:<8}|{:<8}|{:<30}",
+                        item.id.unwrap(),
+                        item.date,
+                        item.amount,
+                        item.credit_account,
+                        item.debit_account,
+                        item.description.unwrap()
+                    );
+                }
+            }
+        },
+        Commands::Ledger { action } => match action {
+            LedgerAction::List { account_id } => {
+                let ledgerlist = get_ledger_entries(&mut con, account_id);
+                println!(
+                    "{:<5}|{:<10}|{:<10}|{:<10}|{:<10}|{:<30}",
+                    "ID", "Date", "Account", "Credit", "Debit", "Description"
+                );
+                for item in ledgerlist {
+                    println!(
+                        "{:<5}|{:<10}|{:<10}|{:<10}|{:<10}|{:<30}",
+                        item.id.unwrap(),
+                        item.date,
+                        get_account_name(&mut con, item.account),
+                        item.credit_amount,
+                        item.debit_amount,
+                        item.description.unwrap()
+                    );
+                }
+            }
+        },
+        Commands::Journal { action } => match action {
+            JournalAction::List => {
+                let journallist = load_entities!(&mut con, schema::journal::table, JournalEntry);
+                println!(
+                    "{:<5}|{:<10}|{:<10}|{:<10}",
+                    "ID", "Account", "Credit", "Debit"
+                );
+                for item in journallist {
+                    println!(
+                        "{:<5}|{:<10}|{:<10}|{:<10}",
+                        item.id.unwrap(),
+                        get_account_name(&mut con, item.account),
+                        item.credit_amount,
+                        item.debit_amount
+                    );
+                }
             }
         },
     }

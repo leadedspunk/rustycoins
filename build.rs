@@ -19,7 +19,7 @@ fn main() {
 
         // Run Diesel setup to initialize the database schema
         Command::new("diesel")
-            .args(&["migration", "revert"])
+            .args(&["migration", "revert", "-a"])
             .env("DATABASE_URL", db_path.to_str().unwrap())
             .status()
             .expect("Failed to run diesel migration");

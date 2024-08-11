@@ -16,25 +16,18 @@ pub fn start() {
     let revenue:Account = Account::new("Revenue", 0);
     let liabilites:Account = Account::new("Liabilities", 0);
 
+    let cash:Account = Account::new("Cash", 2);
+    let bank:Account = Account::new("Bank", 2);
+
+    let salary:Account = Account::new("Salary", 3);
+
     let mut connection = establish_connection();
 
+    let accs = vec![expenses,assets,revenue,liabilites,cash,bank,salary];
+
     diesel::insert_into(schema::accounts::table)
-        .values(expenses)
+        .values(accs)
         .execute(&mut connection)
         .expect("Error adding accounts");
 
-    diesel::insert_into(schema::accounts::table)
-        .values(assets)
-        .execute(&mut connection)
-        .expect("Error adding accounts");
-
-    diesel::insert_into(schema::accounts::table)
-        .values(revenue)
-        .execute(&mut connection)
-        .expect("Error adding accounts");
-
-    diesel::insert_into(schema::accounts::table)
-        .values(liabilites)
-        .execute(&mut connection)
-        .expect("Error adding accounts");
 }
