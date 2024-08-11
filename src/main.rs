@@ -24,4 +24,6 @@ fn main() {
 
     bootstrap_database::start();
 
+    println!("Hello, world!");
+
 }

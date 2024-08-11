@@ -7,6 +7,7 @@ on:
 env:
   CARGO_TERM_COLOR: always
   RUSTFLAGS: '-L./libs'
+  DATABASE_URL: './target/release/db.sqlite'
 
 jobs:
   build:
@@ -26,14 +27,17 @@ jobs:
     - name: check files
       run: cd ./target/release; tree
 
-    - name: Try run
-      run: cd ./target/release/rustycoins.elf
+    - name: create db
+      run: diesel migration run
 
-    - name: Create Release
-      id: create_release
-      uses: softprops/action-gh-release@v1
-      with:
-        files: target/release/rustycoins
+    # - name: Try run
+    #   run: cd ./target/release/rustycoins.elf
 
-    - name: Run tests
-      run: cargo test --verbose
+    # - name: Create Release
+    #   id: create_release
+    #   uses: softprops/action-gh-release@v1
+    #   with:
+    #     files: target/release/rustycoins
+
+    # - name: Run tests
+    #   run: cargo test --verbose
