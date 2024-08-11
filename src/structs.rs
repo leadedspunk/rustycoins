@@ -1,33 +1,37 @@
 use time::{self, OffsetDateTime};
 use rand::random;
+use diesel::prelude::*;
+use crate::schema::accounts;
 
+#[derive(Queryable, Selectable, Insertable)]
+#[diesel(table_name = accounts)]
 pub struct Account{
-    pub id: u16,
-    name: String,
-    parent: u16,
+    pub id: Option<i32>,
+    pub name: String,
+    pub parent: i32,
 }
 
 pub struct MTransaction{
-    pub id: u32,
-    date: time::Date,
-    time: time::Time,
-    description: String,
-    amount: f32,
-    credit_account: u16,
-    debit_account: u16,
+    pub id: i32,
+    pub date: time::Date,
+    pub time: time::Time,
+    pub description: String,
+    pub amount: f32,
+    pub credit_account: i32,
+    pub debit_account: i32,
 }
 
 // pub struct JournalEntry{
-//     pub id: u32,
-//     transaction: u32,
-//     account: u16,
+//     pub id: i32,
+//     transaction: i32,
+//     account: i32,
 //     debit_amount: f32,
 //     credit_amount: f32,
 // }
 
 pub struct LedgerEntry{
-    pub id: u32,
-    transaction: u32,
+    pub id: i32,
+    transaction: i32,
     date: time::Date,
     time: time::Time,
     description: String,
@@ -37,9 +41,9 @@ pub struct LedgerEntry{
 }
 
 impl Account {
-    pub fn new(name: &str, parent: u16) -> Self {
+    pub fn new(name: &str, parent: i32) -> Self {
         Account{
-            id: random(),
+            id: None,
             name: name.to_string(),
             parent,
         }
@@ -47,7 +51,7 @@ impl Account {
 }
 
 impl MTransaction {
-    pub fn new(date_time: OffsetDateTime, amount: f32, credit_account: u16, debit_account: u16) -> Self {
+    pub fn new(date_time: OffsetDateTime, amount: f32, credit_account: i32, debit_account: i32) -> Self {
         let date = date_time.date();
         let time = date_time.time();
         MTransaction {
@@ -76,7 +80,7 @@ impl MTransaction {
 }
 
 // impl JournalEntry {
-//     fn new_credit(transaction: u32, account: u16, ledger_entry: LedgerEntry, amount: f32) -> Self {
+//     fn new_credit(transaction: i32, account: i32, ledger_entry: LedgerEntry, amount: f32) -> Self {
 //         JournalEntry {
 //             id: random(),
 //             transaction,
@@ -86,7 +90,7 @@ impl MTransaction {
 //         }
 //     }
 
-//     fn new_debit(transaction: u32, account: u16, ledger_entry: LedgerEntry, amount: f32) -> Self {
+//     fn new_debit(transaction: i32, account: i32, ledger_entry: LedgerEntry, amount: f32) -> Self {
 //         JournalEntry {
 //             id: random(),
 //             transaction,
@@ -98,7 +102,7 @@ impl MTransaction {
 // }
 
 impl LedgerEntry {
-    fn new_credit(transaction: u32, date: time::Date, time: time::Time, description: String, amount: f32) -> Self {
+    fn new_credit(transaction: i32, date: time::Date, time: time::Time, description: String, amount: f32) -> Self {
         LedgerEntry {
             id: random(),
             transaction,
@@ -111,7 +115,7 @@ impl LedgerEntry {
         }
     }
 
-    fn new_debit(transaction: u32, date: time::Date, time: time::Time, description: String, amount: f32) -> Self {
+    fn new_debit(transaction: i32, date: time::Date, time: time::Time, description: String, amount: f32) -> Self {
         LedgerEntry {
             id: random(),
             transaction,
@@ -125,6 +129,6 @@ impl LedgerEntry {
     }
 
     pub fn balance_update(&mut self, balance: f32){
-        self.balance == balance;
+        self.balance = balance;
     }
 }

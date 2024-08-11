@@ -2,9 +2,14 @@
 name = "rustycoins"
 version = "0.1.0"
 edition = "2021"
+buiild = "build.rs"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+clap = "4.5.13"
+diesel = { version = "2.2.2", features = ["sqlite"] }
+dotenv = { version = "0.15.0", features = ["clap"] }
 rand = "0.8.5"
+serde = { version = "1.0.204", features = ["derive"] }
 time = "0.3.36"

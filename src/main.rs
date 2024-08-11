@@ -1,16 +1,25 @@
+use diesel::{Connection, SqliteConnection};
 use time;
 use rustycoins::structs::{Account, MTransaction};
+use rustycoins::bootstrap_database;
+use std::env;
+use dotenv::dotenv;
+
+fn get_accounts() {
+
+}
+
+fn establish_connection() -> SqliteConnection {
+    dotenv().ok();
+    let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+    SqliteConnection::establish(&database_url)
+        .expect(&format!("Error connecting to {}", database_url))
+    }
 
 fn main() {
-    //let expenses:Account = Account::new("Expenses", 0);
-    let assets:Account = Account::new("Assets", 0);
-    let revenue:Account = Account::new("Revenue", 0);
 
-    let mut transaction:MTransaction = MTransaction::new(
-        time::OffsetDateTime::now_utc(), 120.00,
-        assets.id, revenue.id,
-    );
+    let con = establish_connection();
 
-    let (ledger_credit, ledger_debit) = transaction.create_entrys();
+    bootstrap_database::start();
 
 }
