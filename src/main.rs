@@ -2,7 +2,8 @@ use diesel::{Connection, SqliteConnection};
 use time;
 use rustycoins::structs::{Account, MTransaction};
 use rustycoins::bootstrap_database;
-use std::env;
+use std::path::Path;
+use std::{env, fs};
 use dotenv::dotenv;
 
 fn get_accounts() {
@@ -17,6 +18,7 @@ fn establish_connection() -> SqliteConnection {
     }
 
 fn main() {
+    env::set_var("DATABASE_URL", "./db.sqlite");
 
     let con = establish_connection();
 
