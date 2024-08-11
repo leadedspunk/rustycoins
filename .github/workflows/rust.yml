@@ -16,11 +16,6 @@ jobs:
     - name: Chekout
       uses: actions/checkout@v4
 
-    - name: Set up Rust
-      uses: actions/setup-rust@v1
-      with:
-        rust-version: '1.80.0'  # Specify the Rust version you need
-
     - name: Install deps
       run: cargo install diesel_cli
 
