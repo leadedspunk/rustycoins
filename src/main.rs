@@ -12,6 +12,8 @@ use rustycoins::schema::transactions;
 use rustycoins::structs::{Account, JournalEntry, LedgerEntry, MTransaction};
 use std::env;
 use std::path::Path;
+use csv::ReaderBuilder;
+use rustycoins::report;
 
 macro_rules! load_entities {
     ($con:expr, $table:expr, $entity:ty) => {
@@ -30,6 +32,33 @@ fn establish_connection() -> SqliteConnection {
     SqliteConnection::establish(&database_url)
         .expect(&format!("Error connecting to {}", database_url))
 }
+
+pub fn insert_transaction(new_transaction: MTransaction){
+    let mut con = establish_connection();
+    diesel::insert_into(transactions::table)
+                    .values(new_transaction)
+                    .execute(&mut con)
+                    .expect("Error creating account");
+
+                use schema::transactions::dsl::id;
+                let mut new_transaction: MTransaction =
+                    schema::transactions::table
+                    .order(id.desc())
+                    .first(&mut con).unwrap();
+
+                let (ledgers, journals) = new_transaction.create_entrys();
+
+                diesel::insert_into(ledger::table)
+                    .values(ledgers)
+                    .execute(&mut con)
+                    .expect("Error creating account");
+
+                diesel::insert_into(journal::table)
+                    .values(journals)
+                    .execute(&mut con)
+                    .expect("Error creating account");
+}
+
 
 pub fn get_account_name(con: &mut SqliteConnection, acct_id: i32) -> String {
     use crate::schema::accounts::dsl::{accounts, id, name};
@@ -90,6 +119,11 @@ enum Commands {
         #[command(subcommand)]
         action: JournalAction,
     },
+    Report {
+        #[command(subcommand)]
+        action: ReportAction,
+    },
+
 }
 
 #[derive(Subcommand, Debug)]
@@ -122,6 +156,9 @@ enum TransactionAction {
         // Description
         desc: String,
     },
+    Import {
+        file: String,
+    },
     // List all transactions
     List,
 }
@@ -136,6 +173,15 @@ enum LedgerAction {
 enum JournalAction {
     // List all transactions
     List,
+}
+
+#[derive(Subcommand, Debug)]
+enum ReportAction {
+    // List all transactions
+    Generate {
+        date_1: NaiveDate,
+        date_2: Option<NaiveDate>,
+    },
 }
 
 fn main() {
@@ -202,7 +248,7 @@ fn main() {
                 desc,
             } => {
                 let ddate: NaiveDate =
-                    NaiveDate::parse_from_str(&datetime, "%d-%m-%Y").expect("Invalid Date Format");
+                    NaiveDate::parse_from_str(&datetime, "%Y-%m-%d").expect("Invalid Date Format");
                 println!("Creating a new transaction:");
                 println!("  Amount: {}", amount);
                 println!("  Credit: {}", credit);
@@ -213,25 +259,7 @@ fn main() {
                     MTransaction::new(ddate, amount, credit, debit);
                 new_transaction.description(&desc);
 
-                diesel::insert_into(transactions::table)
-                    .values(new_transaction)
-                    .execute(&mut con)
-                    .expect("Error creating account");
-
-                let mut new_transaction: MTransaction =
-                    schema::transactions::table.first(&mut con).unwrap();
-
-                let (ledgers, journals) = new_transaction.create_entrys();
-
-                diesel::insert_into(ledger::table)
-                    .values(ledgers)
-                    .execute(&mut con)
-                    .expect("Error creating account");
-
-                diesel::insert_into(journal::table)
-                    .values(journals)
-                    .execute(&mut con)
-                    .expect("Error creating account");
+                insert_transaction(new_transaction);
             }
             TransactionAction::List => {
                 let transactionlist =
@@ -252,17 +280,28 @@ fn main() {
                     );
                 }
             }
+            TransactionAction::Import {file } => {
+                let mut reader = ReaderBuilder::new()
+                .has_headers(true)
+                .from_path(file)
+                .expect("error loading file");
+
+                for result in reader.deserialize() {
+                    let record: MTransaction  = result.expect("Error");
+                    insert_transaction(record);
+                }
+            }
         },
         Commands::Ledger { action } => match action {
             LedgerAction::List { account_id } => {
                 let ledgerlist = get_ledger_entries(&mut con, account_id);
                 println!(
-                    "{:<5}|{:<10}|{:<10}|{:<10}|{:<10}|{:<30}",
+                    "{:<5}|{:<10}|{:<15}|{:<10}|{:<10}|{:<30}",
                     "ID", "Date", "Account", "Credit", "Debit", "Description"
                 );
                 for item in ledgerlist {
                     println!(
-                        "{:<5}|{:<10}|{:<10}|{:<10}|{:<10}|{:<30}",
+                        "{:<5}|{:<10}|{:<15}|{:<10}|{:<10}|{:<30}",
                         item.id.unwrap(),
                         item.date,
                         get_account_name(&mut con, item.account),
@@ -289,6 +328,16 @@ fn main() {
                         item.debit_amount
                     );
                 }
+            }
+        },
+        Commands::Report { action } => match action {
+            ReportAction::Generate { date_1, date_2 } => {
+                if let Some(date_2) = date_2 {
+                    report::generate(date_1, date_2);
+                }else {
+                    report::generate(date_1, date_1);
+                }
+                // report::generate();
             }
         },
     }

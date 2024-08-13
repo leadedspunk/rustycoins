@@ -11,23 +11,23 @@ fn establish_connection() -> SqliteConnection {
 }
 
 pub fn start() {
-    let expenses:Account = Account::new("Expenses", 0);
-    let assets:Account = Account::new("Assets", 0);
-    let revenue:Account = Account::new("Revenue", 0);
-    let liabilites:Account = Account::new("Liabilities", 0);
+    let mut accs = vec![];
 
-    let cash:Account = Account::new("Cash", 2);
-    let bank:Account = Account::new("Bank", 2);
+    accs.push(Account::new("Expenses", 0));
+    accs.push(Account::new("Assets", 0));
+    accs.push(Account::new("Income", 0));
+    accs.push(Account::new("Liabilities", 0));
 
-    let salary:Account = Account::new("Salary", 3);
+    accs.push(Account::new("Other", 1));
+    accs.push(Account::new("Cash", 2));
+    accs.push(Account::new("Accounts Recievable", 2));
+    accs.push(Account::new("Salary", 3));
+    accs.push(Account::new("Accounts Payable", 4));
 
-    let mut connection = establish_connection();
-
-    let accs = vec![expenses,assets,revenue,liabilites,cash,bank,salary];
 
     diesel::insert_into(schema::accounts::table)
         .values(accs)
-        .execute(&mut connection)
+        .execute(&mut establish_connection())
         .expect("Error adding accounts");
 
 }

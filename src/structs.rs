@@ -11,6 +11,7 @@ pub struct Account{
 }
 
 #[derive(Queryable, Selectable, Insertable)]
+#[derive(serde::Deserialize)]
 #[table_name = "transactions"]
 pub struct MTransaction{
     pub id: Option<i32>,
