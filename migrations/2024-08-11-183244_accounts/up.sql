@@ -1,5 +1,0 @@
-CREATE TABLE accounts (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL,
-    parent INTEGER NOT NULL
-);
