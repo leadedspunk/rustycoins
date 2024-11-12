@@ -1,6 +1,6 @@
-# Tauri + Leptos
+# Tauri + Sycamore
 
-This template should help get you started developing with Tauri and Leptos.
+This template should help get you started developing with Tauri and Sycamore.
 
 ## Recommended IDE Setup
 

@@ -1,5 +1,5 @@
-.logo.leptos:hover {
-  filter: drop-shadow(0 0 2em #a82e20);
+.logo.sycamore:hover {
+  filter: drop-shadow(0 0 2em #f8b94c);
 }
 :root {
   font-family: Inter, Avenir, Helvetica, Arial, sans-serif;
